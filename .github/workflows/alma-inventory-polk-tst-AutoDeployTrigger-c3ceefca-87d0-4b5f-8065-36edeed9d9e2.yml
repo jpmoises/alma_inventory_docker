@@ -1,0 +1,47 @@
+name: Trigger auto deployment for alma-inventory-polk-tst
+
+# When this action will be executed
+on:
+  # Automatically trigger it when detected changes in repo
+  push:
+    branches: 
+      [ master ]
+    paths:
+    - '**'
+    - '.github/workflows/alma-inventory-polk-tst-AutoDeployTrigger-c3ceefca-87d0-4b5f-8065-36edeed9d9e2.yml'
+
+  # Allow manual trigger 
+  workflow_dispatch:      
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions: 
+      id-token: write #This is required for requesting the OIDC JWT Token
+      contents: read #Required when GH token is used to authenticate with private repo
+
+    steps:
+      - name: Checkout to the branch
+        uses: actions/checkout@v2
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.ALMAINVENTORYPOLKTST_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.ALMAINVENTORYPOLKTST_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.ALMAINVENTORYPOLKTST_AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build and push container image to registry
+        uses: azure/container-apps-deploy-action@v2
+        with:
+          appSourcePath: ${{ github.workspace }} 
+          registryUrl: 
+          registryUsername: ${{ secrets.ALMAINVENTORYPOLKTST_REGISTRY_USERNAME }}
+          registryPassword: ${{ secrets.ALMAINVENTORYPOLKTST_REGISTRY_PASSWORD }}
+          containerAppName: alma-inventory-polk-tst
+          resourceGroup: DefaultResourceGroup-EUS2
+          imageToBuild: default/[parameters('containerAppName')]:${{ github.sha }}
+          _buildArgumentsKey_: |
+            _buildArgumentsValues_
+
+
